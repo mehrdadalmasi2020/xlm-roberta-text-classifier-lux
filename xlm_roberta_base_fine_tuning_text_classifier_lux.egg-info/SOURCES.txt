@@ -1,0 +1,10 @@
+LICENSE
+README.md
+setup.py
+xlm_roberta_base_fine_tuning_text_classifier_lux/__init__.py
+xlm_roberta_base_fine_tuning_text_classifier_lux/text_classification_model.py
+xlm_roberta_base_fine_tuning_text_classifier_lux.egg-info/PKG-INFO
+xlm_roberta_base_fine_tuning_text_classifier_lux.egg-info/SOURCES.txt
+xlm_roberta_base_fine_tuning_text_classifier_lux.egg-info/dependency_links.txt
+xlm_roberta_base_fine_tuning_text_classifier_lux.egg-info/requires.txt
+xlm_roberta_base_fine_tuning_text_classifier_lux.egg-info/top_level.txt

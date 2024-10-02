@@ -1,23 +1,21 @@
 import os
 import pandas as pd
-from transformers import BertForSequenceClassification, Trainer, TrainingArguments, BertTokenizer
+from transformers import XLMRobertaTokenizer, XLMRobertaForSequenceClassification, Trainer, TrainingArguments
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from torch.utils.data import Dataset
 import torch
 import numpy as np
 
-
-
 class TextClassificationModel:
-    def __init__(self, model_name='bert-base-multilingual-cased', cache_dir=None):
+    def __init__(self, model_name='FacebookAI/xlm-roberta-base', cache_dir=None):
         """
         Initializes the model, tokenizer, and device.
-        :param model_name: Name of the pre-trained BERT model (default: bert-base-uncased)
+        :param model_name: Name of the pre-trained XLM-RoBERTa model (default: FacebookAI/xlm-roberta-base)
         :param cache_dir: Directory where the model cache is stored (default: None)
         """
         self.model_name = model_name
         self.cache_dir = cache_dir if cache_dir else os.getcwd()
-        self.tokenizer = BertTokenizer.from_pretrained(model_name, cache_dir=self.cache_dir)
+        self.tokenizer = XLMRobertaTokenizer.from_pretrained(model_name, cache_dir=self.cache_dir)
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         self.df = None  # DataFrame to store the data
         self.class_mapping = {}  # Dictionary to map class labels to indices
@@ -53,23 +51,19 @@ class TextClassificationModel:
 
         # Handle the label column (only if label_column is provided)
         if label_column in self.df.columns and update_class_mapping:
-            # For training, update the class mapping
             unique_labels = sorted(self.df[label_column].unique())
             print(f"Text labels found, converting them to numeric: {unique_labels}")
             self.class_mapping = {label: idx for idx, label in enumerate(unique_labels)}
             y_data = self.df[label_column].map(self.class_mapping).tolist()
         elif label_column in self.df.columns:
-            # For validation and test sets (already have class mapping), use the existing class mapping
             y_data = self.df[label_column].map(self.class_mapping).tolist()
         else:
-            # If no label column is provided (for unlabeled test data)
             y_data = None  # No labels for predictions
 
         return text_data, y_data
 
-
     def tokenize_data(self, texts):
-        """Tokenizes the text data using the BERT tokenizer."""
+        """Tokenizes the text data using the XLM-RoBERTa tokenizer."""
         return self.tokenizer(texts, truncation=True, padding=True, max_length=512)
 
     def compute_metrics(self, p):
@@ -78,13 +72,19 @@ class TextClassificationModel:
         preds = p.predictions.argmax(-1)
         precision, recall, f1, support = precision_recall_fscore_support(labels, preds, average=None)
         acc = accuracy_score(labels, preds)
+
+        # Convert numpy arrays to lists before returning
         return {
             'accuracy': float(acc),
             'precision_per_class': precision.tolist(),
             'recall_per_class': recall.tolist(),
             'f1_per_class': f1.tolist(),
-            'support_per_class': support.tolist()
+            'support_per_class': support.tolist(),
+            'precision': precision.mean(),  # Mean precision across classes
+            'recall': recall.mean(),        # Mean recall across classes
+            'f1': f1.mean()                 # Mean F1 across classes
         }
+
 
     def create_dataset(self, encodings, labels):
         """Creates a PyTorch dataset from encodings and labels."""
@@ -111,7 +111,7 @@ class TextClassificationModel:
         train_dataset = self.create_dataset(train_encodings, y_train)
         test_dataset = self.create_dataset(test_encodings, y_test)
 
-        model = BertForSequenceClassification.from_pretrained(self.model_name, num_labels=len(set(y_train)), cache_dir=self.cache_dir).to(self.device)
+        model = XLMRobertaForSequenceClassification.from_pretrained(self.model_name, num_labels=len(set(y_train)), cache_dir=self.cache_dir).to(self.device)
 
         training_args = TrainingArguments(
             output_dir='./results',
@@ -144,7 +144,7 @@ class TextClassificationModel:
 
     def load_and_evaluate(self, save_model_path, text_test, y_test):
         """Loads a pre-trained model and evaluates it on the given test data."""
-        model = BertForSequenceClassification.from_pretrained(save_model_path, num_labels=len(set(y_test))).to(self.device)
+        model = XLMRobertaForSequenceClassification.from_pretrained(save_model_path, num_labels=len(set(y_test))).to(self.device)
 
         test_encodings = self.tokenize_data(text_test)
         test_dataset = self.create_dataset(test_encodings, y_test)
@@ -181,30 +181,16 @@ class TextClassificationModel:
         return eval_results
 
     def predict(self, text_test, y_test, save_predictions_path, save_model_path):
-        """
-        Generates predictions for the test dataset, saves them along with the true labels as a DataFrame.
-        :param text_test: Test text data
-        :param y_test: True labels for the test data
-        :param save_predictions_path: Path where the predictions will be saved
-        :param save_model_path: Path where the fine-tuned model is saved
-        :return: DataFrame with predictions and true labels
-        """
-        # Load fine-tuned BERT model
-        model = BertForSequenceClassification.from_pretrained(save_model_path, num_labels=len(self.class_mapping)).to(self.device)
+        """Generates predictions for the test dataset and saves them with true labels."""
+        model = XLMRobertaForSequenceClassification.from_pretrained(save_model_path, num_labels=len(self.class_mapping)).to(self.device)
 
-        # Tokenize the test data
         test_encodings = self.tokenize_data(text_test)
+        test_dataset = self.create_dataset(test_encodings, [0]*len(text_test))
 
-        # Create the test dataset (no labels needed for prediction)
-        test_dataset = self.create_dataset(test_encodings, [0]*len(text_test))  # Placeholder labels
-
-        # Create a DataLoader for the test dataset
         test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=4, shuffle=False)
 
-        # Set model to evaluation mode (disable dropout, batchnorm)
         model.eval()
 
-        # Collect predictions
         predictions = []
         for batch in test_loader:
             with torch.no_grad():
@@ -215,20 +201,15 @@ class TextClassificationModel:
 
         predictions = np.concatenate(predictions)
 
-        # Convert predictions back to class labels
         predicted_labels = [list(self.class_mapping.keys())[list(self.class_mapping.values()).index(pred)] for pred in predictions]
-
-        # Convert true labels back to class names for comparison
         true_labels = [list(self.class_mapping.keys())[list(self.class_mapping.values()).index(true)] for true in y_test]
 
-        # Save predictions and true labels as a DataFrame
         df_predictions = pd.DataFrame({
             'Text': [' '.join(text) if isinstance(text, list) else text for text in text_test],
             'True Label': true_labels,
             'Predicted Label': predicted_labels
         })
 
-        # Save to the specified path
         try:
             df_predictions.to_excel(save_predictions_path, index=False)
             print(f"Predictions saved to (Excel) {save_predictions_path}")
@@ -237,8 +218,6 @@ class TextClassificationModel:
             print(f"Predictions saved to (CSV) {save_predictions_path}")
 
         return df_predictions
-
-
 
     def print_class_wise_metrics(self, eval_results):
         """
@@ -261,13 +240,8 @@ class TextClassificationModel:
             # self.trainer.log({'f1_class_{}'.format(class_name): f1[idx]})
 
 
-
     def evaluate_predictions_from_file(self, predictions_file_path):
-        """
-        Loads predictions from a file and compares predicted labels with true labels to generate a classification report.
-        :param predictions_file_path: Path to the CSV/Excel file containing true and predicted labels.
-        """
-        # Step 1: Load the predictions from the file
+        """Loads predictions from a file and compares predicted labels with true labels to generate a classification report."""
         if predictions_file_path.endswith('.csv'):
             df_predictions = pd.read_csv(predictions_file_path)
         elif predictions_file_path.endswith('.xlsx'):
@@ -275,18 +249,13 @@ class TextClassificationModel:
         else:
             raise ValueError("Unsupported file format. Please provide a CSV or Excel file.")
 
-        # Step 2: Extract true and predicted labels
-        true_labels = df_predictions['True Label']  # Assuming 'True Label' column has the ground truth
-        predicted_labels = df_predictions['Predicted Label']  # Assuming 'Predicted Label' column has predictions
+        true_labels = df_predictions['True Label']
+        predicted_labels = df_predictions['Predicted Label']
 
-        # Step 3: Calculate precision, recall, F1-score, and support
         precision, recall, f1, support = precision_recall_fscore_support(true_labels, predicted_labels, average=None, labels=list(self.class_mapping.keys()))
-
-        # Step 4: Calculate overall accuracy
         accuracy = accuracy_score(true_labels, predicted_labels)
 
-        # Step 5: Print the results in table format
-        print(f"\nClass-wise Precision, Recall, F1-score, and Support:")
+        print("\nClass-wise Precision, Recall, F1-score, and Support:")
         print(f"{'Class':<15} {'Precision':<10} {'Recall':<10} {'F1-score':<10} {'Support':<10}")
         for idx, class_name in enumerate(self.class_mapping.keys()):
             print(f"{class_name:<15} {precision[idx]:<10.4f} {recall[idx]:<10.4f} {f1[idx]:<10.4f} {support[idx]:<10}")

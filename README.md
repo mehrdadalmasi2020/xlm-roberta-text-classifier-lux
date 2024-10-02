@@ -1,10 +1,11 @@
-# BERT Fine-Tuning Text Classifier - Lux
-[![Downloads](https://static.pepy.tech/badge/bert-fine-tuning-text-classifier-lux)](https://pepy.tech/project/bert-fine-tuning-text-classifier-lux)
+# XLM-RoBERTa Fine-Tuning Text Classifier - Lux
+[![Downloads](https://static.pepy.tech/badge/xlm-roberta-base-fine-tuning-text-classifier-lux)](https://pepy.tech/project/xlm-roberta-base-fine-tuning-text-classifier-lux)
 
-**BERT Fine-Tuning Text Classifier - Lux** is a high-performance library designed for fine-tuning pre-trained BERT models on multilingual datasets (French, German, English, and Luxembourgish). The library provides a streamlined interface for loading your dataset, fine-tuning a pre-trained model, and evaluating it using key metrics like accuracy, precision, recall, and F1-score. In our example on [Google Colab](https://colab.research.google.com/drive/1xgYsPlZXhcM0xecc7fwYDgPEob6lWScO?usp=sharing), we have used the BNL newspaper dataset. You can access the dataset [here](https://huggingface.co/datasets/biglam/bnl_newspapers1841-1879).
+**XLM-RoBERTa Fine-Tuning Text Classifier - Lux** is a high-performance library designed for fine-tuning pre-trained FacebookAI/xlm-roberta-base models on multilingual datasets (French, German, English, and Luxembourgish). XLM-RoBERTa is a robust, multilingual variant of RoBERTa, trained on a large-scale dataset covering 100 languages (refer [HERE](https://huggingface.co/FacebookAI/xlm-roberta-base)), making it highly suitable for tasks involving multilingual text. 
+The library provides a streamlined interface for loading your dataset, fine-tuning the XLM-RoBERTa model, and evaluating it using key metrics like accuracy, precision, recall, and F1-score.
+For more information, study our example on [Google Colab](https://colab.research.google.com/drive/11UJWhM_nZWLBJ3pkx0FpLnGA7xowG0KV?usp=sharing)
 
 ## Table of Contents
-- [Installation](#installation)
 - [Key Features](#key-features)
 - [Quick Start](#quick-start)
 - [Fine-tuning the Model](#fine-tuning-the-model)
@@ -14,26 +15,10 @@
 - [License](#license)
 - [Example Usage](#example-usage)
 
-## Installation
 
-Clone the repository:
-
-```bash
-git clone https://github.com/mehrdadalmasi2020/bert-finetuning-text-classifier-lux.git
-```
-## Navigate to the project directory:
-
-```bash
-cd bert-finetuning-text-classifier-lux
-```
-## Install the required dependencies:
-
-```bash
-pip install -r requirements.txt
-```
 ## Key Features
 
-- **BERT Fine-tuning**: Fine-tune a pre-trained BERT model on your custom text classification task.
+- **XLM-RoBERTa Fine-tuning**: Fine-tune a pre-trained XLM-RoBERTa model on your custom text classification task.
 - **Multilingual Support**: Works seamlessly with datasets in French, German, English, and Luxembourgish.
 - **Comprehensive Metrics**: Evaluates the model using precision, recall, F1-score, and accuracy per class.
 - **GPU Acceleration**: Supports CUDA-enabled devices for faster training.
@@ -45,7 +30,7 @@ The primary interface for interacting with this library is through the TextClass
 
 ## Fine-tuning the Model
 
-To work with multiple languages, we will be using the bert-base-multilingual-cased model for fine-tuning.
+To work with multiple languages, we will be using the XLM-RoBERTa model for fine-tuning.
 
 
 
@@ -54,8 +39,8 @@ To work with multiple languages, we will be using the bert-base-multilingual-cas
 ```python
 from text_classifier import TextClassificationModel
 
-# Initialize the multilingual BERT model
-model = TextClassificationModel(model_name='bert-base-multilingual-cased')
+# Initialize the multilingual XLM-RoBERTa model
+model = TextClassificationModel()
 ```
 ### 2. Load and Prepare Your Data:
 
@@ -147,15 +132,14 @@ Epoch    Training Loss    Validation Loss    Accuracy
 
 - Mehrdad ALMASI (email: mehrdad.al.2023@gmail.com)
 - Demival VASQUES FILHO (email: demival.vasques@uni.lu)
-- Gabor Mihaly TOTH (email: gabor.toth@uni.lu)
 
 ### License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Example Usage  # New section added
+## Example Usage 
 
-This section provides a complete example of how to load a dataset, split it into training, validation, and test sets, fine-tune the BERT model, and evaluate it.
+This section provides a complete example of how to load a dataset, split it into training, validation, and test sets, fine-tune the XLM-RoBERTa model, and evaluate it.
 
 
 ### 1. Build and Split the Dataset
@@ -166,14 +150,14 @@ The example below demonstrates how to use the dataset, split it into training, v
 
 Make sure the selected columns for training, validation, and testing do not contain null values.
 
-Our example is available on [Google Colab](https://colab.research.google.com/drive/1xgYsPlZXhcM0xecc7fwYDgPEob6lWScO?usp=sharing)
+Our example is available on [Google Colab](https://colab.research.google.com/drive/11UJWhM_nZWLBJ3pkx0FpLnGA7xowG0KV?usp=sharing)
 
 
 ```python
 
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from bert_fine_tuning_text_classifier_lux import TextClassificationModel
+from xlm_roberta_base_fine_tuning_text_classifier_lux import TextClassificationModel
 from datasets import load_dataset
 
 # Ask the user if they have a dataset or want to build one
@@ -286,7 +270,17 @@ You can now analyze the output results based on metrics such as accuracy, precis
 save_predictions_path = input("Please enter the path to save the predictions (default: ./predictions.csv): ").strip() or './predictions.csv'
 
 # Generate predictions and save them
-predictions_df = model.predict(text_test, save_predictions_path, save_model_path)
+predictions_df = model.predict(text_test, y_test, save_predictions_path, save_model_path)
+
+# predictions_df = model.predict(text_test, save_predictions_path, save_model_path)
 print("Predictions saved in the file:", predictions_df)
+
+# Assuming predictions are saved in 'save_predictions_path'
+predictions_file_path = save_predictions_path
+
+# Evaluate the predictions from the file and print the metrics
+model.evaluate_predictions_from_file(predictions_file_path)
+
+
 ```
 

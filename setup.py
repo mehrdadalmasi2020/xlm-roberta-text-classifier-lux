@@ -5,14 +5,14 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name="bert-fine-tuning-text-classifier-lux", 
-    version="0.2.2",  # version number
-    author="Mehrdad ALMASI, Demival VASQUES FILHO, Gabor Mihaly TOTH",
-    author_email="mehrdad.al.2023@gmail.com, demival.vasques@uni.lu, gabor.toth@uni.lu",
-    description="A library that leverages pre-trained BERT models for multilingual text classification (French, German, English, and Luxembourgish) with easy-to-use fine-tuning capabilities.",
+    name="xlm-roberta-base-fine-tuning-text-classifier-lux", 
+    version="0.1.8",  # version number
+    author="Mehrdad ALMASI, Demival VASQUES FILHO",
+    author_email="mehrdad.al.2023@gmail.com, demival.vasques@uni.lu",
+    description="A library that leverages pre-trained XLM-RoBERTa models for multilingual text classification (French, German, English, and Luxembourgish) with easy-to-use fine-tuning capabilities.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/mehrdadalmasi2020/bert-fine-tuning-text-classifier-lux", 
+    url="https://github.com/mehrdadalmasi2020/xlm-roberta-text-classifier-lux.git", 
     packages=find_packages(),
     include_package_data=True,  # Include non-Python files in the package distribution
     install_requires=[
